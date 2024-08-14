@@ -48,13 +48,6 @@
         #lives { top: 10px; left: 10px; }
         #score { top: 10px; right: 10px; }
         #level { top: 60px; right: 10px; }
-        #currentLetterDisplay { 
-            top: 10px; 
-            left: 50%; 
-            transform: translateX(-50%);
-            font-size: 24px;
-            font-weight: bold;
-        }
         #feedback {
             position: absolute;
             top: 50%;
@@ -91,7 +84,7 @@
             left: 50%;
             transform: translateX(-50%);
         }
-        #instructionsOverlay, #endGameOverlay {
+        #instructionsOverlay, #endGameOverlay, #levelUpOverlay {
             position: absolute;
             top: 0;
             left: 0;
@@ -106,15 +99,23 @@
             text-align: center;
             line-height: 1.6;
         }
-        #instructionsOverlay h2, #endGameOverlay h2 {
+        #instructionsOverlay h2, #endGameOverlay h2, #levelUpOverlay h2 {
             font-size: 24px;
             margin-bottom: 20px;
         }
         #startButton, #playAgainButton {
             margin-top: 20px;
         }
-        #endGameOverlay {
+        #endGameOverlay, #levelUpOverlay {
             display: none;
+        }
+        #levelUpOverlay {
+            background: rgba(74, 144, 226, 0.9);
+            animation: fadeInOut 2s ease-in-out;
+        }
+        @keyframes fadeInOut {
+            0%, 100% { opacity: 0; }
+            50% { opacity: 1; }
         }
     </style>
 </head>
@@ -125,7 +126,6 @@
             <div id="lives" class="gameInfo">❤️❤️❤️❤️❤️</div>
             <div id="score" class="gameInfo">נקודות: 0</div>
             <div id="level" class="gameInfo">שלב: 1</div>
-            <div id="currentLetterDisplay" class="gameInfo">אות נוכחית: </div>
             <div id="feedback"></div>
             <button id="replayButton">השמע שוב</button>
             <div id="instructionsOverlay">
@@ -142,6 +142,10 @@
                 <p id="emoji"></p>
                 <button id="playAgainButton">שחק שוב</button>
             </div>
+            <div id="levelUpOverlay">
+                <h2>עלית שלב!</h2>
+                <p id="newLevel"></p>
+            </div>
         </div>
     </div>
 
@@ -152,7 +156,7 @@
         const feedbackElement = document.getElementById('feedback');
         const instructionsOverlay = document.getElementById('instructionsOverlay');
         const endGameOverlay = document.getElementById('endGameOverlay');
-        const currentLetterDisplay = document.getElementById('currentLetterDisplay');
+        const levelUpOverlay = document.getElementById('levelUpOverlay');
 
         let spaceship = { x: canvas.width / 2, y: canvas.height - 70, width: 60, height: 60, speed: 8 };
         let letters = [];
@@ -229,6 +233,14 @@
             }, 2000);
         }
 
+        function showLevelUp() {
+            levelUpOverlay.style.display = 'flex';
+            document.getElementById('newLevel').textContent = `שלב ${level}`;
+            setTimeout(() => {
+                levelUpOverlay.style.display = 'none';
+            }, 2000);
+        }
+
         function updateGame() {
             if (!gameActive) return;
             ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -250,6 +262,7 @@
                             level++;
                             baseSpeed += 0.2;
                             document.getElementById('level').textContent = 'שלב: ' + level;
+                            showLevelUp();
                         }
                         setNewLetter();
                         return false;
@@ -303,8 +316,6 @@
 
         function setNewLetter() {
             currentLetter = lettersList[Math.floor(Math.random() * lettersList.length)];
-            const hebrewName = hebrewNames[lettersList.indexOf(currentLetter)];
-            currentLetterDisplay.textContent = `אות נוכחית: ${currentLetter} (${hebrewName})`;
             playSound(currentLetter);
         }
 
@@ -334,21 +345,21 @@
         document.getElementById('playAgainButton').addEventListener('click', () => location.reload());
 
         document.addEventListener('keydown', (e) => {
-            if (!gameActive) return;
-            switch(e.key) {
-                case 'ArrowLeft':
-                    spaceship.x = Math.max(spaceship.width / 2, spaceship.x - spaceship.speed);
-                    break;
-                case 'ArrowRight':
-                    spaceship.x = Math.min(canvas.width - spaceship.width / 2, spaceship.x + spaceship.speed);
-                    break;
-                case ' ':
-                    playSound(currentLetter);
-                    break;
-            }
-        });
+        if (!gameActive) return;
+        switch(e.key) {
+            case 'ArrowLeft':
+                spaceship.x = Math.max(spaceship.width / 2, spaceship.x - spaceship.speed);
+                break;
+            case 'ArrowRight':
+                spaceship.x = Math.min(canvas.width - spaceship.width / 2, spaceship.x + spaceship.speed);
+                break;
+            case ' ':
+                playSound(currentLetter);
+                break;
+        }
+    });
 
-        canvas.addEventListener('mousemove', (e) => { 
+    canvas.addEventListener('mousemove', (e) => {
         if (!gameActive) return;
         const rect = canvas.getBoundingClientRect();
         spaceship.x = e.clientX - rect.left;
@@ -362,5 +373,4 @@
             console.error('שגיאה בטעינת התמונות:', err);
         });
 </script>
-</body>
-</html>
+</body></html>
