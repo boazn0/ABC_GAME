@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>משחק זיהוי שמות ושמיעת צלילי אותיות ABC</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f0f0f0;
+        }
+        #game-container {
+            text-align: center;
+            background-color: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        #letter-display {
+            font-size: 72px;
+            margin-bottom: 20px;
+        }
+        #options {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        button {
+            font-size: 18px;
+            padding: 10px 15px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        #sound-button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            padding: 10px 20px;
+            font-size: 16px;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <h1>מה שם האות?</h1>
+        <div id="letter-display"></div>
+        <button id="sound-button">השמע את צליל האות</button>
+        <div id="options"></div>
+        <p id="result"></p>
+    </div>
+
+    <script>
+        const letters = [
+            {letter: 'A', name: 'איי'},
+            {letter: 'B', name: 'בי'},
+            {letter: 'C', name: 'סי'},
+            {letter: 'D', name: 'די'},
+            {letter: 'E', name: 'אי'},
+            {letter: 'F', name: 'אף'},
+            {letter: 'G', name: 'ג׳י'},
+            {letter: 'H', name: 'אייץ׳'},
+            {letter: 'I', name: 'איי'},
+            {letter: 'J', name: 'ג׳יי'},
+            {letter: 'K', name: 'קיי'},
+            {letter: 'L', name: 'אל'},
+            {letter: 'M', name: 'אם'},
+            {letter: 'N', name: 'אן'},
+            {letter: 'O', name: 'או'},
+            {letter: 'P', name: 'פי'},
+            {letter: 'Q', name: 'קיו'},
+            {letter: 'R', name: 'אר'},
+            {letter: 'S', name: 'אס'},
+            {letter: 'T', name: 'טי'},
+            {letter: 'U', name: 'יו'},
+            {letter: 'V', name: 'וי'},
+            {letter: 'W', name: 'דאבל-יו'},
+            {letter: 'X', name: 'אקס'},
+            {letter: 'Y', name: 'וואי'},
+            {letter: 'Z', name: 'זי'}
+        ];
+        
+        let currentLetter;
+        let audio = new Audio();
+
+        function newRound() {
+            currentLetter = letters[Math.floor(Math.random() * letters.length)];
+            document.getElementById('letter-display').textContent = currentLetter.letter;
+            
+            const options = document.getElementById('options');
+            options.innerHTML = '';
+            
+            const correctAnswer = currentLetter.name;
+            const wrongAnswers = getWrongAnswers(correctAnswer);
+            
+            const answers = [correctAnswer, ...wrongAnswers].sort(() => Math.random() - 0.5);
+            
+            answers.forEach(answer => {
+                const button = document.createElement('button');
+                button.textContent = answer;
+                button.onclick = () => checkAnswer(answer);
+                options.appendChild(button);
+            });
+
+            document.getElementById('sound-button').onclick = playSound;
+            
+            // טען את קובץ השמע מראש
+            audio.src = `MP3/${currentLetter.letter}.mp3`;
+        }
+
+        function getWrongAnswers(correct) {
+            const wrongAnswers = [];
+            while (wrongAnswers.length < 3) {
+                const randomLetter = letters[Math.floor(Math.random() * letters.length)];
+                if (randomLetter.name !== correct && !wrongAnswers.includes(randomLetter.name)) {
+                    wrongAnswers.push(randomLetter.name);
+                }
+            }
+            return wrongAnswers;
+        }
+
+        function checkAnswer(answer) {
+            const resultElement = document.getElementById('result');
+            if (answer === currentLetter.name) {
+                resultElement.textContent = 'נכון! כל הכבוד!';
+                setTimeout(newRound, 1500);
+            } else {
+                resultElement.textContent = 'לא נכון, נסה שוב.';
+            }
+        }
+
+        function playSound() {
+            audio.play();
+        }
+
+        newRound();
+    </script>
+</body>
+</html>

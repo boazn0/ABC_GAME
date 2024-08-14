@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>משחק חללית אותיות ABC</title>
+    <style>
+        body {
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #000;
+            font-family: Arial, sans-serif;
+        }
+        #gameCanvas {
+            border: 2px solid #fff;
+        }
+        #gameInfo {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            color: #fff;
+            font-size: 20px;
+        }
+        #score {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            color: #fff;
+            font-size: 20px;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="gameCanvas"></canvas>
+    <div id="gameInfo">❤️❤️❤️❤️❤️</div>
+    <div id="score">נקודות: 0</div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        canvas.width = 800;
+        canvas.height = 600;
+
+        let spaceship = { x: canvas.width / 2, y: canvas.height - 50, width: 50, height: 50 };
+        let letters = [];
+        let obstacles = [];
+        let lives = 5;
+        let score = 0;
+        let currentLetter = '';
+        let audio = new Audio();
+
+        const lettersList = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+        const hebrewNames = ['איי', 'בי', 'סי', 'די', 'אי', 'אף', 'ג׳י', 'אייץ׳', 'איי', 'ג׳יי', 'קיי', 'אל', 'אם', 'אן', 'או', 'פי', 'קיו', 'אר', 'אס', 'טי', 'יו', 'וי', 'דאבל-יו', 'אקס', 'וואי', 'זי'];
+
+        function createLetter() {
+            const letter = lettersList[Math.floor(Math.random() * lettersList.length)];
+            return {
+                x: Math.random() * (canvas.width - 30),
+                y: 0,
+                text: letter,
+                speed: 2 + Math.random() * 2
+            };
+        }
+
+        function createObstacle() {
+            return {
+                x: Math.random() * (canvas.width - 30),
+                y: 0,
+                width: 30,
+                height: 30,
+                speed: 2 + Math.random() * 2
+            };
+        }
+
+        function drawSpaceship() {
+            ctx.fillStyle = '#00f';
+            ctx.beginPath();
+            ctx.moveTo(spaceship.x, spaceship.y);
+            ctx.lineTo(spaceship.x - 25, spaceship.y + 50);
+            ctx.lineTo(spaceship.x + 25, spaceship.y + 50);
+            ctx.closePath();
+            ctx.fill();
+        }
+
+        function drawLetters() {
+            ctx.font = '24px Arial';
+            ctx.fillStyle = '#fff';
+            letters.forEach(letter => {
+                ctx.fillText(letter.text, letter.x, letter.y);
+            });
+        }
+
+        function drawObstacles() {
+            ctx.fillStyle = '#f00';
+            obstacles.forEach(obstacle => {
+                ctx.fillRect(obstacle.x, obstacle.y, obstacle.width, obstacle.height);
+            });
+        }
+
+        function moveSpaceship(e) {
+            const rect = canvas.getBoundingClientRect();
+            spaceship.x = e.clientX - rect.left;
+        }
+
+        function updateGame() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            letters = letters.filter(letter => {
+                letter.y += letter.speed;
+                if (letter.y > canvas.height) return false;
+                if (
+                    letter.x < spaceship.x + spaceship.width &&
+                    letter.x + 30 > spaceship.x &&
+                    letter.y < spaceship.y + spaceship.height &&
+                    letter.y + 30 > spaceship.y
+                ) {
+                    if (letter.text === currentLetter) {
+                        score += 10;
+                        document.getElementById('score').textContent = 'נקודות: ' + score;
+                        playSound(currentLetter);
+                        return false;
+                    } else {
+                        lives--;
+                        document.getElementById('gameInfo').textContent = '❤️'.repeat(lives);
+                        if (lives === 0) {
+                            alert('המשחק נגמר! הניקוד שלך: ' + score);
+                            location.reload();
+                        }
+                        return false;
+                    }
+                }
+                return true;
+            });
+
+            obstacles = obstacles.filter(obstacle => {
+                obstacle.y += obstacle.speed;
+                if (obstacle.y > canvas.height) return false;
+                if (
+                    obstacle.x < spaceship.x + spaceship.width &&
+                    obstacle.x + obstacle.width > spaceship.x &&
+                    obstacle.y < spaceship.y + spaceship.height &&
+                    obstacle.y + obstacle.height > spaceship.y
+                ) {
+                    lives--;
+                    document.getElementById('gameInfo').textContent = '❤️'.repeat(lives);
+                    if (lives === 0) {
+                        alert('המשחק נגמר! הניקוד שלך: ' + score);
+                        location.reload();
+                    }
+                    return false;
+                }
+                return true;
+            });
+
+            if (Math.random() < 0.02) letters.push(createLetter());
+            if (Math.random() < 0.01) obstacles.push(createObstacle());
+
+            drawSpaceship();
+            drawLetters();
+            drawObstacles();
+
+            requestAnimationFrame(updateGame);
+        }
+
+        function playSound(letter) {
+            audio.src = `MP3/${letter}.mp3`;
+            audio.play();
+        }
+
+        function startGame() {
+            canvas.addEventListener('mousemove', moveSpaceship);
+            updateGame();
+            setInterval(() => {
+                currentLetter = lettersList[Math.floor(Math.random() * lettersList.length)];
+                playSound(currentLetter);
+            }, 3000);
+        }
+
+        startGame();
+    </script>
+</body>
+</html>

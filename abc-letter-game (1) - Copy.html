@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>משחק חללית אותיות ABC</title>
+    <style>
+        body {
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #000;
+            font-family: Arial, sans-serif;
+        }
+        #gameCanvas {
+            border: 2px solid #fff;
+        }
+        #gameInfo, #score, #level {
+            position: absolute;
+            color: #fff;
+            font-size: 20px;
+        }
+        #gameInfo { top: 10px; left: 10px; }
+        #score { top: 10px; right: 10px; }
+        #level { top: 40px; right: 10px; }
+        #startButton, #replayButton {
+            position: absolute;
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+        #startButton { top: 50%; left: 50%; transform: translate(-50%, -50%); }
+        #replayButton { top: 10px; left: 50%; transform: translateX(-50%); display: none; }
+    </style>
+</head>
+<body>
+    <canvas id="gameCanvas"></canvas>
+    <div id="gameInfo">❤️❤️❤️❤️❤️</div>
+    <div id="score">נקודות: 0</div>
+    <div id="level">שלב: 1</div>
+    <button id="startButton">התחל משחק</button>
+    <button id="replayButton">השמע שוב</button>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        canvas.width = 800;
+        canvas.height = 600;
+
+        let spaceship = { x: canvas.width / 2, y: canvas.height - 70, width: 60, height: 60, speed: 5 };
+        let letters = [];
+        let monsters = [];
+        let lives = 5;
+        let score = 0;
+        let currentLetter = '';
+        let audio = new Audio();
+        let level = 1;
+        let lettersCollected = 0;
+        let baseSpeed = 2;
+        let gameActive = false;
+        let feedbackTimer = null;
+
+        const lettersList = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+        const hebrewNames = ['איי', 'בי', 'סי', 'די', 'אי', 'אף', 'ג׳י', 'אייץ׳', 'איי', 'ג׳יי', 'קיי', 'אל', 'אם', 'אן', 'או', 'פי', 'קיו', 'אר', 'אס', 'טי', 'יו', 'וי', 'דאבל-יו', 'אקס', 'וואי', 'זי'];
+
+        const spaceshipImg = new Image();
+        spaceshipImg.src = 'Spaceship.png';
+
+        const monsterImgs = [];
+        for (let i = 1; i <= 5; i++) {
+            const img = new Image();
+            img.src = `monster${i}.png`;
+            monsterImgs.push(img);
+        }
+
+        function createLetter() {
+            const letter = lettersList[Math.floor(Math.random() * lettersList.length)];
+            return {
+                x: Math.random() * (canvas.width - 30),
+                y: 0,
+                text: letter,
+                speed: baseSpeed + Math.random() * 2
+            };
+        }
+
+        function createMonster() {
+            return {
+                x: Math.random() * (canvas.width - 50),
+                y: 0,
+                width: 50,
+                height: 50,
+                speed: baseSpeed + Math.random() * 2,
+                image: monsterImgs[Math.floor(Math.random() * monsterImgs.length)]
+            };
+        }
+
+        function drawSpaceship() {
+            ctx.drawImage(spaceshipImg, spaceship.x - spaceship.width / 2, spaceship.y, spaceship.width, spaceship.height);
+        }
+
+        function drawLetters() {
+            ctx.font = '24px Arial';
+            ctx.fillStyle = '#fff';
+            letters.forEach(letter => {
+                ctx.fillText(letter.text, letter.x, letter.y);
+            });
+        }
+
+        function drawMonsters() {
+            monsters.forEach(monster => {
+                ctx.drawImage(monster.image, monster.x, monster.y, monster.width, monster.height);
+            });
+        }
+
+        function showFeedback(text, color) {
+            clearTimeout(feedbackTimer);
+            ctx.font = '36px Arial';
+            ctx.fillStyle = color;
+            ctx.fillText(text, canvas.width / 2 - 50, canvas.height / 2);
+            feedbackTimer = setTimeout(() => {
+                ctx.clearRect(canvas.width / 2 - 60, canvas.height / 2 - 40, 120, 50);
+            }, 1000);
+        }
+
+        function updateGame() {
+            if (!gameActive) return;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            letters = letters.filter(letter => {
+                letter.y += letter.speed;
+                if (letter.y > canvas.height) return false;
+                if (
+                    letter.x < spaceship.x + spaceship.width / 2 &&
+                    letter.x + 30 > spaceship.x - spaceship.width / 2 &&
+                    letter.y < spaceship.y + spaceship.height &&
+                    letter.y + 30 > spaceship.y
+                ) {
+                    if (letter.text === currentLetter) {
+                        score += 10;
+                        lettersCollected++;
+                        document.getElementById('score').textContent = 'נקודות: ' + score;
+                        showFeedback('נכון!', 'green');
+                        if (lettersCollected % 3 === 0) {
+                            level++;
+                            baseSpeed += 0.5;
+                            document.getElementById('level').textContent = 'שלב: ' + level;
+                        }
+                        setNewLetter();
+                        return false;
+                    } else {
+                        lives--;
+                        document.getElementById('gameInfo').textContent = '❤️'.repeat(lives);
+                        showFeedback('לא נכון', 'red');
+                        if (lives === 0) {
+                            endGame();
+                        }
+                        return false;
+                    }
+                }
+                return true;
+            });
+
+            monsters = monsters.filter(monster => {
+                monster.y += monster.speed;
+                if (monster.y > canvas.height) return false;
+                if (
+                    monster.x < spaceship.x + spaceship.width / 2 &&
+                    monster.x + monster.width > spaceship.x - spaceship.width / 2 &&
+                    monster.y < spaceship.y + spaceship.height &&
+                    monster.y + monster.height > spaceship.y
+                ) {
+                    lives--;
+                    document.getElementById('gameInfo').textContent = '❤️'.repeat(lives);
+                    showFeedback('התנגשות!', 'orange');
+                    if (lives === 0) {
+                        endGame();
+                    }
+                    return false;
+                }
+                return true;
+            });
+
+            if (Math.random() < 0.02) letters.push(createLetter());
+            if (Math.random() < 0.01) monsters.push(createMonster());
+
+            drawSpaceship();
+            drawLetters();
+            drawMonsters();
+
+            requestAnimationFrame(updateGame);
+        }
+
+        function playSound(letter) {
+            audio.src = `MP3/${letter}.mp3`;
+            audio.play();
+        }
+
+        function setNewLetter() {
+            currentLetter = lettersList[Math.floor(Math.random() * lettersList.length)];
+            playSound(currentLetter);
+        }
+
+        function startGame() {
+            gameActive = true;
+            document.getElementById('startButton').style.display = 'none';
+            document.getElementById('replayButton').style.display = 'block';
+            setNewLetter();
+            updateGame();
+        }
+
+        function endGame() {
+            gameActive = false;
+            alert('המשחק נגמר! הניקוד שלך: ' + score);
+            location.reload();
+        }
+
+        document.getElementById('startButton').addEventListener('click', startGame);
+        document.getElementById('replayButton').addEventListener('click', () => playSound(currentLetter));
+
+        document.addEventListener('keydown', (e) => {
+            if (!gameActive) return;
+            switch(e.key) {
+                case 'ArrowLeft':
+                    spaceship.x = Math.max(spaceship.width / 2, spaceship.x - spaceship.speed);
+                    break;
+                case 'ArrowRight':
+                    spaceship.x = Math.min(canvas.width - spaceship.width / 2, spaceship.x + spaceship.speed);
+                    break;
+                case ' ':
+                    playSound(currentLetter);
+                    break;
+            }
+        });
+
+        Promise.all([spaceshipImg.decode(), ...monsterImgs.map(img => img.decode())])
+            .then(() => {
+                ctx.fillStyle = '#fff';
+                ctx.font = '30px Arial';
+                ctx.fillText('לחץ על "התחל משחק" כדי להתחיל', canvas.width / 2 - 150, canvas.height / 2);
+            })
+            .catch(err => {
+                console.error('שגיאה בטעינת התמונות:', err);
+            });
+    </script>
+</body>
+</html>
