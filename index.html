@@ -70,11 +70,21 @@
             background: #4a90e2;
             color: white;
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            pointer-events: auto;
         }
         button:hover {
             background: #3a78c2;
             transform: translateY(-2px);
             box-shadow: 0 6px 8px rgba(0, 0, 0, 0.15);
+        }
+        #controlsContainer {
+            position: absolute;
+            bottom: 20px;
+            left: 0;
+            right: 0;
+            display: flex;
+            justify-content: center;
+            gap: 20px;
         }
         #startButton {
             position: absolute;
@@ -83,11 +93,26 @@
             transform: translate(-50%, -50%);
         }
         #replayButton {
-            position: absolute;
-            bottom: 20px;
-            left: 50%;
-            transform: translateX(-50%);
             display: none;
+        }
+        #instructionsOverlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            font-size: 18px;
+            text-align: center;
+            line-height: 1.6;
+        }
+        #instructionsOverlay h2 {
+            font-size: 24px;
+            margin-bottom: 20px;
         }
     </style>
 </head>
@@ -99,8 +124,16 @@
             <div id="score" class="gameInfo">נקודות: 0</div>
             <div id="level" class="gameInfo">שלב: 1</div>
             <div id="feedback"></div>
-            <button id="startButton">התחל משחק</button>
-            <button id="replayButton">השמע שוב</button>
+            <div id="controlsContainer">
+                <button id="replayButton">השמע שוב</button>
+            </div>
+            <div id="instructionsOverlay">
+                <h2>ברוכים הבאים למשחק חללית האותיות!</h2>
+                <p>השתמשו במקשי החצים כדי להזיז את החללית.</p>
+                <p>תפסו את האות הנכונה ששמעתם והימנעו מהמפלצות.</p>
+                <p>לחצו על מקש הרווח כדי לשמוע שוב את האות.</p>
+                <button id="startButton">התחל משחק</button>
+            </div>
         </div>
     </div>
 
@@ -109,6 +142,7 @@
         const ctx = canvas.getContext('2d');
         const uiOverlay = document.getElementById('uiOverlay');
         const feedbackElement = document.getElementById('feedback');
+        const instructionsOverlay = document.getElementById('instructionsOverlay');
 
         let spaceship = { x: canvas.width / 2, y: canvas.height - 70, width: 60, height: 60, speed: 8 };
         let letters = [];
@@ -264,7 +298,7 @@
 
         function startGame() {
             gameActive = true;
-            document.getElementById('startButton').style.display = 'none';
+            instructionsOverlay.style.display = 'none';
             document.getElementById('replayButton').style.display = 'block';
             setNewLetter();
             updateGame();
@@ -298,10 +332,7 @@
 
         Promise.all([spaceshipImg.decode(), ...monsterImgs.map(img => img.decode())])
             .then(() => {
-                ctx.fillStyle = '#fff';
-                ctx.font = 'bold 30px Rubik';
-                ctx.textAlign = 'center';
-                ctx.fillText('לחץ על "התחל משחק" כדי להתחיל', canvas.width / 2, canvas.height / 2);
+                // התמונות נטענו בהצלחה, המשחק מוכן להתחיל
             })
             .catch(err => {
                 console.error('שגיאה בטעינת התמונות:', err);
