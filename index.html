@@ -91,7 +91,7 @@
             left: 50%;
             transform: translateX(-50%);
         }
-        #instructionsOverlay {
+        #instructionsOverlay, #endGameOverlay {
             position: absolute;
             top: 0;
             left: 0;
@@ -106,12 +106,15 @@
             text-align: center;
             line-height: 1.6;
         }
-        #instructionsOverlay h2 {
+        #instructionsOverlay h2, #endGameOverlay h2 {
             font-size: 24px;
             margin-bottom: 20px;
         }
-        #startButton {
+        #startButton, #playAgainButton {
             margin-top: 20px;
+        }
+        #endGameOverlay {
+            display: none;
         }
     </style>
 </head>
@@ -132,6 +135,13 @@
                 <p>לחצו על מקש הרווח או על כפתור "השמע שוב" כדי לשמוע שוב את האות.</p>
                 <button id="startButton">התחל משחק</button>
             </div>
+            <div id="endGameOverlay">
+                <h2>המשחק נגמר!</h2>
+                <p id="finalScore"></p>
+                <p id="highScore"></p>
+                <p id="emoji"></p>
+                <button id="playAgainButton">שחק שוב</button>
+            </div>
         </div>
     </div>
 
@@ -141,6 +151,7 @@
         const uiOverlay = document.getElementById('uiOverlay');
         const feedbackElement = document.getElementById('feedback');
         const instructionsOverlay = document.getElementById('instructionsOverlay');
+        const endGameOverlay = document.getElementById('endGameOverlay');
         const currentLetterDisplay = document.getElementById('currentLetterDisplay');
 
         let spaceship = { x: canvas.width / 2, y: canvas.height - 70, width: 60, height: 60, speed: 8 };
@@ -151,9 +162,9 @@
         let currentLetter = '';
         let audio = new Audio();
         let level = 1;
-        let lettersCollected = 0;
         let baseSpeed = 1;
         let gameActive = false;
+        let highScore = localStorage.getItem('highScore') || 0;
 
         const lettersList = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
         const hebrewNames = ['איי', 'בי', 'סי', 'די', 'אי', 'אף', 'ג׳י', 'אייץ׳', 'איי', 'ג׳יי', 'קיי', 'אל', 'אם', 'אן', 'או', 'פי', 'קיו', 'אר', 'אס', 'טי', 'יו', 'וי', 'דאבל-יו', 'אקס', 'וואי', 'זי'];
@@ -233,10 +244,9 @@
                 ) {
                     if (letter.text === currentLetter) {
                         score += 10;
-                        lettersCollected++;
                         document.getElementById('score').textContent = 'נקודות: ' + score;
                         showFeedback('נכון!', '#4CAF50');
-                        if (lettersCollected % 5 === 0) {
+                        if (score % 30 === 0) {
                             level++;
                             baseSpeed += 0.2;
                             document.getElementById('level').textContent = 'שלב: ' + level;
@@ -287,13 +297,14 @@
         }
 
         function playSound(letter) {
-            audio.src = `MP3/${letter}.mp3`;
+            audio.src = `Mp3/${letter}.mp3`;
             audio.play();
         }
 
         function setNewLetter() {
             currentLetter = lettersList[Math.floor(Math.random() * lettersList.length)];
-            currentLetterDisplay.textContent = 'אות נוכחית: ' + currentLetter;
+            const hebrewName = hebrewNames[lettersList.indexOf(currentLetter)];
+            currentLetterDisplay.textContent = `אות נוכחית: ${currentLetter} (${hebrewName})`;
             playSound(currentLetter);
         }
 
@@ -307,14 +318,20 @@
 
         function endGame() {
             gameActive = false;
-            showFeedback(`המשחק נגמר! הניקוד שלך: ${score}`, '#FF5252');
-            setTimeout(() => {
-                location.reload();
-            }, 3000);
+            endGameOverlay.style.display = 'flex';
+            document.getElementById('finalScore').textContent = `הניקוד שלך: ${score}`;
+            if (score > highScore) {
+                highScore = score;
+                localStorage.setItem('highScore', highScore);
+            }
+            document.getElementById('highScore').textContent = `שיא: ${highScore}`;
+            const emoji = score < 50 ? '😊' : score < 100 ? '😃' : score < 200 ? '🤩' : '🏆';
+            document.getElementById('emoji').textContent = emoji;
         }
 
         document.getElementById('startButton').addEventListener('click', startGame);
         document.getElementById('replayButton').addEventListener('click', () => playSound(currentLetter));
+        document.getElementById('playAgainButton').addEventListener('click', () => location.reload());
 
         document.addEventListener('keydown', (e) => {
             if (!gameActive) return;
@@ -331,19 +348,19 @@
             }
         });
 
-        canvas.addEventListener('mousemove', (e) => {
-            if (!gameActive) return;
-            const rect = canvas.getBoundingClientRect();
-            spaceship.x = e.clientX - rect.left;
-        });
+        canvas.addEventListener('mousemove', (e) => { 
+        if (!gameActive) return;
+        const rect = canvas.getBoundingClientRect();
+        spaceship.x = e.clientX - rect.left;
+    });
 
-        Promise.all([spaceshipImg.decode(), ...monsterImgs.map(img => img.decode())])
-            .then(() => {
-                // התמונות נטענו בהצלחה, המשחק מוכן להתחיל
-            })
-            .catch(err => {
-                console.error('שגיאה בטעינת התמונות:', err);
-            });
-    </script>
+    Promise.all([spaceshipImg.decode(), ...monsterImgs.map(img => img.decode())])
+        .then(() => {
+            // התמונות נטענו בהצלחה, המשחק מוכן להתחיל
+        })
+        .catch(err => {
+            console.error('שגיאה בטעינת התמונות:', err);
+        });
+</script>
 </body>
 </html>
