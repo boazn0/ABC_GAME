@@ -48,6 +48,13 @@
         #lives { top: 10px; left: 10px; }
         #score { top: 10px; right: 10px; }
         #level { top: 60px; right: 10px; }
+        #currentLetterDisplay { 
+            top: 10px; 
+            left: 50%; 
+            transform: translateX(-50%);
+            font-size: 24px;
+            font-weight: bold;
+        }
         #feedback {
             position: absolute;
             top: 50%;
@@ -77,23 +84,12 @@
             transform: translateY(-2px);
             box-shadow: 0 6px 8px rgba(0, 0, 0, 0.15);
         }
-        #controlsContainer {
-            position: absolute;
-            bottom: 20px;
-            left: 0;
-            right: 0;
-            display: flex;
-            justify-content: center;
-            gap: 20px;
-        }
-        #startButton {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-        }
         #replayButton {
             display: none;
+            position: absolute;
+            top: 60px;
+            left: 50%;
+            transform: translateX(-50%);
         }
         #instructionsOverlay {
             position: absolute;
@@ -114,6 +110,9 @@
             font-size: 24px;
             margin-bottom: 20px;
         }
+        #startButton {
+            margin-top: 20px;
+        }
     </style>
 </head>
 <body>
@@ -123,15 +122,14 @@
             <div id="lives" class="gameInfo">❤️❤️❤️❤️❤️</div>
             <div id="score" class="gameInfo">נקודות: 0</div>
             <div id="level" class="gameInfo">שלב: 1</div>
+            <div id="currentLetterDisplay" class="gameInfo">אות נוכחית: </div>
             <div id="feedback"></div>
-            <div id="controlsContainer">
-                <button id="replayButton">השמע שוב</button>
-            </div>
+            <button id="replayButton">השמע שוב</button>
             <div id="instructionsOverlay">
                 <h2>ברוכים הבאים למשחק חללית האותיות!</h2>
-                <p>השתמשו במקשי החצים כדי להזיז את החללית.</p>
+                <p>השתמשו במקשי החצים או בעכבר כדי להזיז את החללית.</p>
                 <p>תפסו את האות הנכונה ששמעתם והימנעו מהמפלצות.</p>
-                <p>לחצו על מקש הרווח כדי לשמוע שוב את האות.</p>
+                <p>לחצו על מקש הרווח או על כפתור "השמע שוב" כדי לשמוע שוב את האות.</p>
                 <button id="startButton">התחל משחק</button>
             </div>
         </div>
@@ -143,6 +141,7 @@
         const uiOverlay = document.getElementById('uiOverlay');
         const feedbackElement = document.getElementById('feedback');
         const instructionsOverlay = document.getElementById('instructionsOverlay');
+        const currentLetterDisplay = document.getElementById('currentLetterDisplay');
 
         let spaceship = { x: canvas.width / 2, y: canvas.height - 70, width: 60, height: 60, speed: 8 };
         let letters = [];
@@ -153,7 +152,7 @@
         let audio = new Audio();
         let level = 1;
         let lettersCollected = 0;
-        let baseSpeed = 2;
+        let baseSpeed = 1;
         let gameActive = false;
 
         const lettersList = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
@@ -170,7 +169,8 @@
         }
 
         function createLetter() {
-            const letter = lettersList[Math.floor(Math.random() * lettersList.length)];
+            const isTargetLetter = Math.random() < 0.5 / level;
+            const letter = isTargetLetter ? currentLetter : lettersList[Math.floor(Math.random() * lettersList.length)];
             return {
                 x: Math.random() * (canvas.width - 30),
                 y: 0,
@@ -236,9 +236,9 @@
                         lettersCollected++;
                         document.getElementById('score').textContent = 'נקודות: ' + score;
                         showFeedback('נכון!', '#4CAF50');
-                        if (lettersCollected % 3 === 0) {
+                        if (lettersCollected % 5 === 0) {
                             level++;
-                            baseSpeed += 0.5;
+                            baseSpeed += 0.2;
                             document.getElementById('level').textContent = 'שלב: ' + level;
                         }
                         setNewLetter();
@@ -293,6 +293,7 @@
 
         function setNewLetter() {
             currentLetter = lettersList[Math.floor(Math.random() * lettersList.length)];
+            currentLetterDisplay.textContent = 'אות נוכחית: ' + currentLetter;
             playSound(currentLetter);
         }
 
@@ -328,6 +329,12 @@
                     playSound(currentLetter);
                     break;
             }
+        });
+
+        canvas.addEventListener('mousemove', (e) => {
+            if (!gameActive) return;
+            const rect = canvas.getBoundingClientRect();
+            spaceship.x = e.clientX - rect.left;
         });
 
         Promise.all([spaceshipImg.decode(), ...monsterImgs.map(img => img.decode())])
