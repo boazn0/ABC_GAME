@@ -173,8 +173,11 @@ h1{font-size:clamp(1.7rem,6vw,2.5rem);font-weight:800;line-height:1.1;margin:18p
 .card.tier-all::before{background:var(--q-low)}
 .card:hover{transform:translateY(-2px);box-shadow:var(--shadow-lg)}
 .scene{margin:-16px -16px 14px;height:130px;position:relative;background:#5aa0c8;z-index:1}
-.scenelink{display:block;height:100%;text-decoration:none;cursor:pointer}
+.scenelink{display:block;height:100%;text-decoration:none;cursor:pointer;position:relative}
 .scene svg{display:block;width:100%;height:100%}
+.scene .photo{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;transition:opacity .45s ease;z-index:1;background:#5aa0c8}
+.scene .photo.on{opacity:1}
+.scene .photo-badge.loading{opacity:.7}
 .scene::after{content:"";position:absolute;inset:0;box-shadow:inset 0 -20px 26px -20px rgba(0,0,0,.28);pointer-events:none}
 .photo-badge{position:absolute;bottom:9px;inset-inline-start:9px;z-index:2;
   background:rgba(15,20,28,.6);color:#fff;font-size:.76rem;font-weight:800;
@@ -505,7 +508,7 @@ function render(){
     const el = document.createElement("article");
     el.className = "card "+tierOf(r);
     el.innerHTML = `
-      <div class="scene"><a class="scenelink" href="https://www.google.com/search?tbm=isch&q=${encodeURIComponent("Gardaland "+r.o)}" target="_blank" rel="noopener noreferrer" aria-label="תמונות אמיתיות של ${r.n}">${SCN[SC_MAP[r.o]]||""}<span class="photo-badge">📷 תמונות אמיתיות</span></a></div>
+      <div class="scene"><a class="scenelink" href="https://www.google.com/search?tbm=isch&q=${encodeURIComponent("Gardaland "+r.o)}" target="_blank" rel="noopener noreferrer" aria-label="תמונות אמיתיות של ${r.n}">${SCN[SC_MAP[r.o]]||""}<img class="photo" alt="" loading="lazy" decoding="async"><span class="photo-badge">📷 תמונות אמיתיות</span></a></div>
       <div class="chead">
         <div class="emoji">${r.e}</div>
         <div class="ctitle">
@@ -523,6 +526,50 @@ function render(){
       <div class="tip"><span class="em">💡</span><span>${r.tip}</span></div>
       <div class="riders">${riders}</div>`;
     grid.appendChild(el);
+    attachPhoto(el, r);
+  }
+}
+
+/* ====== Real photos: pulled live from Wikimedia Commons when online.
+   Works in the downloaded file with internet; falls back to the illustration
+   when offline or if no photo is found. ====== */
+const photoCache = {};        // ride.o -> url | null
+const PHOTO_QUERY = {         // override the Commons search text where the plain name is ambiguous
+  "Oblivion – The Black Hole":"Oblivion Black Hole Gardaland",
+  "Shaman":"Shaman roller coaster Gardaland",
+  "Mammut":"Mammut Gardaland",
+  "Colorado Boat":"Colorado Gardaland",
+  "I Corsari":"I Corsari Gardaland",
+  "Ramses – Il Risveglio":"Ramses Gardaland",
+  "Peter Pan":"Peter Pan Gardaland",
+  "Kung Fu Panda Academy":"Kung Fu Panda Gardaland"
+};
+function revealPhoto(el, url){
+  if(!url) return;
+  const img = el.querySelector(".photo"); if(!img) return;
+  img.onload = ()=>{ img.classList.add("on"); const b=el.querySelector(".photo-badge"); if(b) b.classList.remove("loading"); };
+  img.onerror = ()=>{ const b=el.querySelector(".photo-badge"); if(b) b.classList.remove("loading"); };
+  img.src = url;
+}
+async function attachPhoto(el, r){
+  const badge = el.querySelector(".photo-badge");
+  if(r.o in photoCache){ revealPhoto(el, photoCache[r.o]); return; }
+  if(badge) badge.classList.add("loading");
+  try{
+    const q = encodeURIComponent((PHOTO_QUERY[r.o] || (r.o+" Gardaland")) + " filetype:bitmap");
+    const api = "https://commons.wikimedia.org/w/api.php?action=query&generator=search"
+      + "&gsrsearch=" + q + "&gsrnamespace=6&gsrlimit=1"
+      + "&prop=imageinfo&iiprop=url&iiurlwidth=680&format=json&origin=*";
+    const res = await fetch(api);
+    const j = await res.json();
+    let url = null;
+    const pages = j && j.query && j.query.pages;
+    if(pages){ const first = Object.values(pages)[0]; if(first && first.imageinfo && first.imageinfo[0]) url = first.imageinfo[0].thumburl; }
+    photoCache[r.o] = url || null;
+    if(url) revealPhoto(el, url); else if(badge) badge.classList.remove("loading");
+  }catch(e){
+    photoCache[r.o] = null;
+    if(badge) badge.classList.remove("loading");
   }
 }
 
